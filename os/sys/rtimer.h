@@ -54,7 +54,6 @@
 #define RTIMER_H_
 
 #include "contiki.h"
-#include "dev/watchdog.h"
 #include <stdbool.h>
 
 /*---------------------------------------------------------------------------*/

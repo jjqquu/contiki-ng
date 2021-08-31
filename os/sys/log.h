@@ -52,11 +52,7 @@
 #define __LOG_H__
 
 #include <stdio.h>
-#include "net/linkaddr.h"
 #include "sys/log-conf.h"
-#if NETSTACK_CONF_WITH_IPV6
-#include "net/ipv6/uip.h"
-#endif /* NETSTACK_CONF_WITH_IPV6 */
 
 /* The different log levels available */
 #define LOG_LEVEL_NONE         0 /* No log */
@@ -106,32 +102,10 @@ struct log_module {
   int max_log_level;
 };
 
-extern int curr_log_level_rpl;
-extern int curr_log_level_tcpip;
-extern int curr_log_level_ipv6;
-extern int curr_log_level_6lowpan;
-extern int curr_log_level_nullnet;
-extern int curr_log_level_mac;
-extern int curr_log_level_framer;
-extern int curr_log_level_6top;
-extern int curr_log_level_coap;
-extern int curr_log_level_snmp;
-extern int curr_log_level_lwm2m;
 extern int curr_log_level_main;
 
 extern struct log_module all_modules[];
 
-#define LOG_LEVEL_RPL                         MIN((LOG_CONF_LEVEL_RPL), curr_log_level_rpl)
-#define LOG_LEVEL_TCPIP                       MIN((LOG_CONF_LEVEL_TCPIP), curr_log_level_tcpip)
-#define LOG_LEVEL_IPV6                        MIN((LOG_CONF_LEVEL_IPV6), curr_log_level_ipv6)
-#define LOG_LEVEL_6LOWPAN                     MIN((LOG_CONF_LEVEL_6LOWPAN), curr_log_level_6lowpan)
-#define LOG_LEVEL_NULLNET                     MIN((LOG_CONF_LEVEL_NULLNET), curr_log_level_nullnet)
-#define LOG_LEVEL_MAC                         MIN((LOG_CONF_LEVEL_MAC), curr_log_level_mac)
-#define LOG_LEVEL_FRAMER                      MIN((LOG_CONF_LEVEL_FRAMER), curr_log_level_framer)
-#define LOG_LEVEL_6TOP                        MIN((LOG_CONF_LEVEL_6TOP), curr_log_level_6top)
-#define LOG_LEVEL_COAP                        MIN((LOG_CONF_LEVEL_COAP), curr_log_level_coap)
-#define LOG_LEVEL_SNMP                        MIN((LOG_CONF_LEVEL_SNMP), curr_log_level_snmp)
-#define LOG_LEVEL_LWM2M                       MIN((LOG_CONF_LEVEL_LWM2M), curr_log_level_lwm2m)
 #define LOG_LEVEL_MAIN                        MIN((LOG_CONF_LEVEL_MAIN), curr_log_level_main)
 
 /* Main log function */
@@ -156,35 +130,6 @@ extern struct log_module all_modules[];
                             } \
                           } while (0)
 
-/* For Cooja annotations */
-#define LOG_ANNOTATE(...) do {  \
-                            if(LOG_WITH_ANNOTATE) { \
-                              LOG_OUTPUT(__VA_ARGS__); \
-                            } \
-                        } while (0)
-
-/* Link-layer address */
-#define LOG_LLADDR(level, lladdr) do {  \
-                            if(level <= (LOG_LEVEL)) { \
-                              if(LOG_WITH_COMPACT_ADDR) { \
-                                log_lladdr_compact(lladdr); \
-                              } else { \
-                                log_lladdr(lladdr); \
-                              } \
-                            } \
-                        } while (0)
-
-/* IPv6 address */
-#define LOG_6ADDR(level, ipaddr) do {  \
-                           if(level <= (LOG_LEVEL)) { \
-                             if(LOG_WITH_COMPACT_ADDR) { \
-                               log_6addr_compact(ipaddr); \
-                             } else { \
-                               log_6addr(ipaddr); \
-                             } \
-                           } \
-                         } while (0)
-
 #define LOG_BYTES(level, data, length) do {  \
                            if(level <= (LOG_LEVEL)) { \
                              log_bytes(data, length); \
@@ -204,18 +149,6 @@ extern struct log_module all_modules[];
 #define LOG_INFO_(...)          LOG(0, LOG_LEVEL_INFO, "INFO", LOG_COLOR_INFO, __VA_ARGS__)
 #define LOG_DBG_(...)           LOG(0, LOG_LEVEL_DBG, "DBG", LOG_COLOR_DBG, __VA_ARGS__)
 
-#define LOG_PRINT_LLADDR(...)  LOG_LLADDR(0, __VA_ARGS__)
-#define LOG_ERR_LLADDR(...)    LOG_LLADDR(LOG_LEVEL_ERR, __VA_ARGS__)
-#define LOG_WARN_LLADDR(...)   LOG_LLADDR(LOG_LEVEL_WARN, __VA_ARGS__)
-#define LOG_INFO_LLADDR(...)   LOG_LLADDR(LOG_LEVEL_INFO, __VA_ARGS__)
-#define LOG_DBG_LLADDR(...)    LOG_LLADDR(LOG_LEVEL_DBG, __VA_ARGS__)
-
-#define LOG_PRINT_6ADDR(...)   LOG_6ADDR(0, __VA_ARGS__)
-#define LOG_ERR_6ADDR(...)     LOG_6ADDR(LOG_LEVEL_ERR, __VA_ARGS__)
-#define LOG_WARN_6ADDR(...)    LOG_6ADDR(LOG_LEVEL_WARN, __VA_ARGS__)
-#define LOG_INFO_6ADDR(...)    LOG_6ADDR(LOG_LEVEL_INFO, __VA_ARGS__)
-#define LOG_DBG_6ADDR(...)     LOG_6ADDR(LOG_LEVEL_DBG, __VA_ARGS__)
-
 #define LOG_PRINT_BYTES(data, length)   LOG_BYTES(0, data, length)
 #define LOG_ERR_BYTES(data, length)     LOG_BYTES(LOG_LEVEL_ERR, data, length)
 #define LOG_WARN_BYTES(data, length)    LOG_BYTES(LOG_LEVEL_WARN, data, length)
@@ -232,45 +165,6 @@ extern struct log_module all_modules[];
 #define LOG_WARN_ENABLED       ((LOG_LEVEL) >= LOG_LEVEL_WARN)
 #define LOG_INFO_ENABLED       ((LOG_LEVEL) >= LOG_LEVEL_INFO)
 #define LOG_DBG_ENABLED        ((LOG_LEVEL) >= LOG_LEVEL_DBG)
-
-#if NETSTACK_CONF_WITH_IPV6
-
-/**
- * Logs an IPv6 address
- * \param ipaddr The IPv6 address
-*/
-void log_6addr(const uip_ipaddr_t *ipaddr);
-
-/**
- * Logs an IPv6 address with a compact format
- * \param ipaddr The IPv6 address
-*/
-void log_6addr_compact(const uip_ipaddr_t *ipaddr);
-
-/**
- * Write at most size - 1 characters of the IP address to the output string,
- * in a compact representation. The output is always null-terminated, unless
- * size is 0.
- *
- * \param buf A pointer to an output string with at least size bytes.
- * \param size The max number of characters to write to the output string.
- * \param ipaddr A pointer to a uip_ipaddr_t that will be printed with printf().
- */
-int log_6addr_compact_snprint(char *buf, size_t size, const uip_ipaddr_t *ipaddr);
-
-#endif /* NETSTACK_CONF_WITH_IPV6 */
-
-/**
- * Logs a link-layer address
- * \param lladdr The link-layer address
-*/
-void log_lladdr(const linkaddr_t *lladdr);
-
-/**
- * Logs a link-layer address with a compact format
- * \param lladdr The link-layer address
-*/
-void log_lladdr_compact(const linkaddr_t *lladdr);
 
 /**
  * Logs a byte array as hex characters

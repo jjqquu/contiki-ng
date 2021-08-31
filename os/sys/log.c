@@ -48,116 +48,19 @@
  *
  */
 
-#include "sys/log.h"
-#include "net/ipv6/ip64-addr.h"
-#include "net/ipv6/uiplib.h"
-#include "deployment/deployment.h"
+#include "string.h"
 
-int curr_log_level_rpl = LOG_CONF_LEVEL_RPL;
-int curr_log_level_tcpip = LOG_CONF_LEVEL_TCPIP;
-int curr_log_level_ipv6 = LOG_CONF_LEVEL_IPV6;
-int curr_log_level_6lowpan = LOG_CONF_LEVEL_6LOWPAN;
-int curr_log_level_nullnet = LOG_CONF_LEVEL_NULLNET;
-int curr_log_level_mac = LOG_CONF_LEVEL_MAC;
-int curr_log_level_framer = LOG_CONF_LEVEL_FRAMER;
-int curr_log_level_6top = LOG_CONF_LEVEL_6TOP;
-int curr_log_level_coap = LOG_CONF_LEVEL_COAP;
-int curr_log_level_snmp = LOG_CONF_LEVEL_SNMP;
-int curr_log_level_lwm2m = LOG_CONF_LEVEL_LWM2M;
+#include "contiki.h"
+
+#include "sys/log.h"
+
 int curr_log_level_main = LOG_CONF_LEVEL_MAIN;
 
 struct log_module all_modules[] = {
-  {"rpl", &curr_log_level_rpl, LOG_CONF_LEVEL_RPL},
-  {"tcpip", &curr_log_level_tcpip, LOG_CONF_LEVEL_TCPIP},
-  {"ipv6", &curr_log_level_ipv6, LOG_CONF_LEVEL_IPV6},
-  {"6lowpan", &curr_log_level_6lowpan, LOG_CONF_LEVEL_6LOWPAN},
-  {"nullnet", &curr_log_level_nullnet, LOG_CONF_LEVEL_NULLNET},
-  {"mac", &curr_log_level_mac, LOG_CONF_LEVEL_MAC},
-  {"framer", &curr_log_level_framer, LOG_CONF_LEVEL_FRAMER},
-  {"6top", &curr_log_level_6top, LOG_CONF_LEVEL_6TOP},
-  {"coap", &curr_log_level_coap, LOG_CONF_LEVEL_COAP},
-  {"snmp", &curr_log_level_snmp, LOG_CONF_LEVEL_SNMP},
-  {"lwm2m", &curr_log_level_lwm2m, LOG_CONF_LEVEL_LWM2M},
   {"main", &curr_log_level_main, LOG_CONF_LEVEL_MAIN},
   {NULL, NULL, 0},
 };
 
-#if NETSTACK_CONF_WITH_IPV6
-
-/*---------------------------------------------------------------------------*/
-void
-log_6addr(const uip_ipaddr_t *ipaddr)
-{
-  char buf[UIPLIB_IPV6_MAX_STR_LEN];
-  uiplib_ipaddr_snprint(buf, sizeof(buf), ipaddr);
-  LOG_OUTPUT("%s", buf);
-}
-/*---------------------------------------------------------------------------*/
-int
-log_6addr_compact_snprint(char *buf, size_t size, const uip_ipaddr_t *ipaddr)
-{
-  if(ipaddr == NULL) {
-    return snprintf(buf, size, "6A-NULL");
-  } else {
-    char *prefix = NULL;
-    if(uip_is_addr_mcast(ipaddr)) {
-      prefix = "6M";
-    } else if(uip_is_addr_linklocal(ipaddr)) {
-      prefix = "6L";
-    } else {
-      prefix = "6G";
-    }
-#if BUILD_WITH_DEPLOYMENT
-    return snprintf(buf, size, "%s-%03u", prefix, deployment_id_from_iid(ipaddr));
-#else /* BUILD_WITH_DEPLOYMENT */
-    return snprintf(buf, size, "%s-%04x", prefix, UIP_HTONS(ipaddr->u16[sizeof(uip_ipaddr_t)/2-1]));
-#endif /* BUILD_WITH_DEPLOYMENT */
-  }
-}
-/*---------------------------------------------------------------------------*/
-void
-log_6addr_compact(const uip_ipaddr_t *ipaddr)
-{
-  char buf[8];
-  log_6addr_compact_snprint(buf, sizeof(buf), ipaddr);
-  LOG_OUTPUT("%s", buf);
-}
-#endif /* NETSTACK_CONF_WITH_IPV6 */
-/*---------------------------------------------------------------------------*/
-void
-log_lladdr(const linkaddr_t *lladdr)
-{
-  if(lladdr == NULL) {
-    LOG_OUTPUT("(NULL LL addr)");
-    return;
-  } else {
-    unsigned int i;
-    for(i = 0; i < LINKADDR_SIZE; i++) {
-      if(i > 0 && i % 2 == 0) {
-        LOG_OUTPUT(".");
-      }
-      LOG_OUTPUT("%02x", lladdr->u8[i]);
-    }
-  }
-}
-/*---------------------------------------------------------------------------*/
-void
-log_lladdr_compact(const linkaddr_t *lladdr)
-{
-  if(lladdr == NULL || linkaddr_cmp(lladdr, &linkaddr_null)) {
-    LOG_OUTPUT("LL-NULL");
-  } else {
-#if BUILD_WITH_DEPLOYMENT
-    LOG_OUTPUT("LL-%04u", deployment_id_from_lladdr(lladdr));
-#else /* BUILD_WITH_DEPLOYMENT */
-#if LINKADDR_SIZE == 8
-    LOG_OUTPUT("LL-%04x", UIP_HTONS(lladdr->u16[LINKADDR_SIZE/2-1]));
-#elif LINKADDR_SIZE == 2
-    LOG_OUTPUT("LL-%04x", UIP_HTONS(lladdr->u16));
-#endif
-#endif /* BUILD_WITH_DEPLOYMENT */
-  }
-}
 /*---------------------------------------------------------------------------*/
 void
 log_bytes(const void *data, size_t length)

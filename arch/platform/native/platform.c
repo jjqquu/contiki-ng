@@ -48,25 +48,7 @@
 #include <sys/select.h>
 #include <errno.h>
 
-#ifdef __CYGWIN__
-#include "net/wpcap-drv.h"
-#endif /* __CYGWIN__ */
-
 #include "contiki.h"
-#include "net/netstack.h"
-
-#include "dev/serial-line.h"
-#include "dev/button-hal.h"
-#include "dev/gpio-hal.h"
-#include "dev/leds.h"
-
-#include "net/ipv6/uip.h"
-#include "net/ipv6/uip-debug.h"
-#include "net/queuebuf.h"
-
-#if NETSTACK_CONF_WITH_IPV6
-#include "net/ipv6/uip-ds6.h"
-#endif /* NETSTACK_CONF_WITH_IPV6 */
 
 /* Log configuration */
 #include "sys/log.h"
@@ -113,12 +95,6 @@
 
 static const struct select_callback *select_callback[SELECT_MAX];
 static int select_max = 0;
-
-#ifdef PLATFORM_CONF_MAC_ADDR
-static uint8_t mac_addr[] = PLATFORM_CONF_MAC_ADDR;
-#else /* PLATFORM_CONF_MAC_ADDR */
-static uint8_t mac_addr[] = { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08 };
-#endif /* PLATFORM_CONF_MAC_ADDR */
 
 /*---------------------------------------------------------------------------*/
 int
@@ -182,49 +158,6 @@ const static struct select_callback stdin_fd = {
 };
 #endif /* SELECT_STDIN */
 /*---------------------------------------------------------------------------*/
-static void
-set_lladdr(void)
-{
-  linkaddr_t addr;
-
-  memset(&addr, 0, sizeof(linkaddr_t));
-#if NETSTACK_CONF_WITH_IPV6
-  memcpy(addr.u8, mac_addr, sizeof(addr.u8));
-#else
-  int i;
-  for(i = 0; i < sizeof(linkaddr_t); ++i) {
-    addr.u8[i] = mac_addr[7 - i];
-  }
-#endif
-  linkaddr_set_node_addr(&addr);
-}
-/*---------------------------------------------------------------------------*/
-#if NETSTACK_CONF_WITH_IPV6
-static void
-set_global_address(void)
-{
-  uip_ipaddr_t ipaddr;
-  const uip_ipaddr_t *default_prefix = uip_ds6_default_prefix();
-
-  /* Assign a unique local address (RFC4193,
-     http://tools.ietf.org/html/rfc4193). */
-  uip_ip6addr_copy(&ipaddr, default_prefix);
-
-  /* Assumes that the uip_lladdr is set */
-  uip_ds6_set_addr_iid(&ipaddr, &uip_lladdr);
-  uip_ds6_addr_add(&ipaddr, 0, ADDR_AUTOCONF);
-
-  LOG_INFO("Added global IPv6 address ");
-  LOG_INFO_6ADDR(&ipaddr);
-  LOG_INFO_("\n");
-
-  /* set the PREFIX::1 address to the IF */
-  uip_ip6addr_copy(&ipaddr, default_prefix);
-  ipaddr.u8[15] = 1;
-  uip_ds6_defrt_add(&ipaddr, 0);
-}
-#endif
-/*---------------------------------------------------------------------------*/
 int contiki_argc = 0;
 char **contiki_argv;
 /*---------------------------------------------------------------------------*/
@@ -251,37 +184,17 @@ platform_process_args(int argc, char **argv)
 void
 platform_init_stage_one()
 {
-  gpio_hal_init();
-  button_hal_init();
-  leds_init();
   return;
 }
 /*---------------------------------------------------------------------------*/
 void
 platform_init_stage_two()
 {
-  set_lladdr();
-  serial_line_init();
-
-#if SELECT_STDIN
-  if(NULL == input_handler) {
-    native_uart_set_input(serial_line_input_byte);
-  }
-#endif
 }
 /*---------------------------------------------------------------------------*/
 void
 platform_init_stage_three()
 {
-#if NETSTACK_CONF_WITH_IPV6
-#ifdef __CYGWIN__
-  process_start(&wpcap_process, NULL);
-#endif
-
-  set_global_address();
-
-#endif /* NETSTACK_CONF_WITH_IPV6 */
-
   /* Make standard output unbuffered. */
   setvbuf(stdout, (char *)NULL, _IONBF, 0);
 }
